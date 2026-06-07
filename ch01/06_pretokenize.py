@@ -33,6 +33,7 @@ def train_bpe(input_text, vocab_size, end_token="<|endoftext|>"):
     texts = input_text.split(end_token)
 
     # ステップ2: 各テキスト片を事前トークン化
+    # 単語(Say, hello, Why, ...)が ids 列（トークン）に変換される
     ids_list = []
     for text in texts:
         for pretoken in pretokenize(text):  # 事前トークン化
@@ -44,6 +45,7 @@ def train_bpe(input_text, vocab_size, end_token="<|endoftext|>"):
 
     for step in tqdm(range(num_merges), desc="Training BPE"):  # tqdmで進捗表示
         counts = defaultdict(int)
+        # 事前にトークン分されたものを跨いだトークン化が行われない
         for ids in ids_list:
             counts = count_pairs(ids, counts)
 
@@ -94,8 +96,9 @@ class BPETokenizer:
                 all_ids.append(self.end_token_id)
             else:
                 # 各事前トークンをBPEエンコード
-                for pretoken in pretokenize(text):
-                    ids = self._encode_text(pretoken)
+                # 事前にトークン分されたものを跨いだトークン化が行われない
+                for pretoken in pretokenize(text):  # 1段階
+                    ids = self._encode_text(pretoken)  # 2段階
                     all_ids.extend(ids)
 
         return all_ids

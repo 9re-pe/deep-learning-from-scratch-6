@@ -46,6 +46,7 @@ class BPETokenizer:
 
     def decode(self, ids):
         # 各トークンIDを対応するバイト列に変換
+        # L32-33 の結果を使うからマージ語の id もバイト列まで戻せる
         byte_list = [self.id_to_bytes[i] for i in ids]
 
         # すべてのバイト列を連結

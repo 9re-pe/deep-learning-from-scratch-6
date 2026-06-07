@@ -30,6 +30,7 @@ def merge(ids, pair, new_id):
 def train_bpe(input_text, vocab_size, end_token="<|endoftext|>"):
     # 特殊トークンでテキストを分割
     texts = input_text.split(end_token)
+    # テキスト片ごとに ids 列を作成
     ids_list = [list(text.encode("utf-8")) for text in texts]
 
     # 基本語彙（0-255）+ 終了トークン用（1個）を除いた分がマージ回数
@@ -38,6 +39,8 @@ def train_bpe(input_text, vocab_size, end_token="<|endoftext|>"):
 
     for step in range(num_merges):
         # 隣接ペアの頻度を集計
+        # カウントはテキスト片ごとに行う、countsは全体で共通
+        # <- テキスト片の境界を跨いだペアがカウントされなくなる
         counts = defaultdict(int)
         for ids in ids_list:
             counts = count_pairs(ids, counts)
@@ -53,6 +56,7 @@ def train_bpe(input_text, vocab_size, end_token="<|endoftext|>"):
         merge_rules[best_pair] = new_id
 
         # マージを実行
+        # テキスト片ごとにマージを行う
         for i in range(len(ids_list)):
             ids_list[i] = merge(ids_list[i], best_pair, new_id)
 
@@ -69,8 +73,9 @@ class BPETokenizer:
     def __init__(self, merge_rules, end_token="<|endoftext|>"):
         self.merge_rules = merge_rules
         self.end_token = end_token
-        self.end_token_id = 256 + len(merge_rules)
+        self.end_token_id = 256 + len(merge_rules)  # 257
 
+        # id to bytes の対応表を作成
         self.id_to_bytes = {i: bytes([i]) for i in range(256)}
         for (id1, id2), new_id in merge_rules.items():
             self.id_to_bytes[new_id] = self.id_to_bytes[id1] + self.id_to_bytes[id2]
@@ -85,6 +90,8 @@ class BPETokenizer:
         return ids
 
     def encode(self, input_text):
+        # 分割結果に end_token も含める
+        # re.split で分割パターンを () で囲むと分割結果にそのパターンも含まれる
         pattern = '(' + re.escape(self.end_token) + ')'
         texts = re.split(pattern, input_text)
         all_ids = []
